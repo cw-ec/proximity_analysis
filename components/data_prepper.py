@@ -1,6 +1,6 @@
 import os, sys, logging
 import pandas as pd
-from datetime import datetime
+import datetime
 from arcgis import GeoAccessor, GeoSeriesAccessor
 from arcpy import env, Geometry, ListFields, ListFeatureClasses, ListDatasets, Exists
 from arcpy.da import UpdateCursor
@@ -26,9 +26,9 @@ class PrepareData:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
-            filemode='a',
             handlers=[
-                logging.FileHandler(os.path.join(log_dir, f"{datetime.today().strftime('%Y-%m-%d')}.log")),
+                logging.FileHandler(os.path.join(log_dir, f"{datetime.datetime.today().strftime('%Y-%m-%d')}.log"),
+                                    mode='a',),
                 logging.StreamHandler(sys.stdout)
             ],
             datefmt="[%Y-%m-%d %H:%M:%S]"  # Tidy's up datetime format
