@@ -7,6 +7,8 @@ This repository contains tool designed to automate Proximity Analysis tasks. Cur
 In order to run these tools you are required to have a python environment associated with an active license of ArcGIS Pro.
 This will allow you to access arcpy and the arcgis python API both of which are required to run this tool. 
 
+No additional installations or setup are required.
+
 ## Tools
 
 ### Data Prepper
@@ -25,3 +27,4 @@ This tool is designed to prep the data for use in the proximity analysis process
 | out_fc_nme  | String  | Optional | Name for the output feature class. Default value for this parameter is "bld_p_processed".                                                                 |
 |     sr      | integer | Optional | WKID for the projection of all layers. (Layers in a different projection will be reprojected to this WKID). The default value for this parameter is 4326. |
 
+Further Documentation to be produced as needed.
