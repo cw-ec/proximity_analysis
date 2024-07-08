@@ -14,10 +14,10 @@ env.overwriteOutput = True  # Need this to overwrite outputs without failing
 class PrepareData:
 
     @staticmethod
-    def is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, prov, ia_a_nme, sr) -> None:
+    def is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr) -> None:
         """Validates input parameters and ensures that they are valid before processing the data"""
         if not Exists(default_gdb):
-            raise Exception(f"Parameter default_gdb: Does not existand should exist beofre processing begins")
+            raise Exception(f"Parameter default_gdb: Does not exist and should exist before processing begins")
         if not Exists(site_a_path):
             raise Exception(
                 f"Parameter site_a_path: Must be a valid link to the data and must exist before processing begins.")
@@ -27,14 +27,13 @@ class PrepareData:
         if not Exists(adv_pd_path):
             raise Exception(
                 f"Parameter adv_pd_path: Must be a valid link to the data and must exist before processing begins.")
-        if (not isinstance(prov, str)) and (not len(2)):
-            raise Exception(
-                f"Parameter prov: Must be a string and a two letter abbreviation of the desired province for example: Nova Scotia = NS.")
         if not isinstance(ia_a_nme, str):
             raise Exception("Parameter ia_a_nme: Must be of type string.")
         if not isinstance(scratch_gdb, str):
             raise Exception(
                 f" Parameter 'scratch_gdb' is of type {type(scratch_gdb)}. This parameter must be a string.")
+        if not isinstance(out_fc_nme, str):
+            raise Exception("Parameter out_fc_nme: Must be of type string.")
         if not isinstance(sr, int):
             raise Exception(
                 f"Parameter sr: Must be an integer matching a projections WKID. Is currently type: {type(sr)}")
@@ -174,12 +173,12 @@ class PrepareData:
                                                   op=self.spatial_relationship)
         bld_p_sdf_joined.drop(columns=['index_right'], inplace=True)
 
-        bld_p_sdf_joined.spatial.to_featureclass(os.path.join(scratch_gdb, "bld_p_processed"), overwrite=True)
+        bld_p_sdf_joined.spatial.to_featureclass(os.path.join(scratch_gdb, self.out_fc_nme), overwrite=True)
 
     def __init__(self, default_gdb: str, scratch_gdb: str, site_a_path: str, adv_pd_path: str, site_p_path: str,
-                 prov: str, ia_a_nme="INDIG_AUTOCH_A", bld_p_nme="BUILDING_P", sr=4326) -> None:
+                 ia_a_nme="INDIG_AUTOCH_A", bld_p_nme="BUILDING_P", out_fc_nme="bld_p_processed", sr=4326) -> None:
 
-        self.is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, prov, ia_a_nme, sr)
+        self.is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr)
 
         if not Exists(scratch_gdb):
             print("Creating scratch gdb")
@@ -187,13 +186,13 @@ class PrepareData:
             CreateFileGDB(path_elements[0], path_elements[1])
 
         # Set other parameters
-        self.prov = prov
-        self.ia_a_nme = f"INDIG_AUTOCH_A_{self.prov}"  # Name of the IND_AUT_A layer
-        self.bld_p_nme = f"BUILDING_P_{self.prov}"  # Name of the building p layer
+        self.ia_a_nme = ia_a_nme  # Name of the IND_AUT_A layer
+        self.bld_p_nme = bld_p_nme  # Name of the building p layer
         self.spatial_relationship = 'intersects'
 
         self.pd_sid_fld_nme = "AUTO_PD_SITE_ID"
         self.adv_sid_fld_nme = "AUTO_ADV_SITE_ID"
+        self.out_fc_nme = out_fc_nme
 
         # Set the data parameters
         self.default_gdb = default_gdb
@@ -202,15 +201,15 @@ class PrepareData:
         self.site_p_pth = site_p_path
         self.adv_pd_pth = adv_pd_path
         self.sr = sr
-        self.ia_a_pth = os.path.join(self.default_gdb, f"{ia_a_nme}")
-        self.bld_p_pth = os.path.join(self.default_gdb, f"{bld_p_nme}")
+        self.ia_a_pth = os.path.join(self.default_gdb, f"{self.ia_a_nme}")
+        self.bld_p_pth = os.path.join(self.default_gdb, f"{self.bld_p_nme}")
         self.indig_sdf = GeoAccessor.from_featureclass(self.ia_a_pth, sr=self.sr)
 
         # Get a list of all site a fields to drop exclude essential fields (cannot be deleted) and the field we want to keep (SITE_ID)
-        self.site_a_fields = [f.name for f in ListFields(site_a_pth) if
+        self.site_a_fields = [f.name for f in ListFields(self.site_a_pth) if
                               f.name not in ["SHAPE.AREA", "SHAPE.LEN", "SITE_ID", "OBJECTID", 'Shape', 'SHAPE',
                                              'Shape_Area', 'Shape_Length']]
-        self.advpd_fields = [f.name for f in ListFields(site_a_pth) if
+        self.advpd_fields = [f.name for f in ListFields(self.site_a_pth) if
                              f.name not in ["SHAPE.AREA", "SHAPE.LEN", "SITE_ID", "OBJECTID", 'Shape', 'SHAPE',
                                             'Shape_Area', 'Shape_Length']]
 
@@ -237,18 +236,22 @@ class PrepareData:
 
 
 if __name__ == "__main__":
-    default_gdb = r"C:\prox_analysis\Proximity_MB\Default.gdb"
-    scratch_gdb = r"C:\prox_analysis\Proximity_MB\scratch.gdb"
+    default_gdb = r"C:\proximity_analysis\data\Proximity_ON\Default.gdb"
+    scratch_gdb = r"C:\proximity_analysis\data\Proximity_ON\scratch.gdb"
 
-    site_a_pth = r"C:\prox_analysis\EGDMP1A.gdb\EGD_MTNC_PD_A"
-    adv_pd_path = r"C:\prox_analysis\EGDMP1A.gdb\EGD_MTNC_ADVPD_A"
-    site_p_pth = r"C:\prox_analysis\Proximity_NS\egdrp1.elections.ca.sde\EGD_RLS.SITE_P"
+    indig_autoch_nme = "INDIG_AUTOCH_A_LC"
+    bld_p_nme = "BUILDING_P_PD_WGS"
+    wkid = 3347
 
-    prov = 'MB'
+    site_a_pth = r"C:\proximity_analysis\data\EGDMP1A.gdb\EGD_MTNC_PD_A"
+    adv_pd_path = r"C:\proximity_analysis\data\EGDMP1A.gdb\EGD_MTNC_ADVPD_A"
+    site_p_pth = r"C:\proximity_analysis\data\site_p.gdb\site_p"
 
     PrepareData(default_gdb=default_gdb,
                 scratch_gdb=scratch_gdb,
                 site_a_path=site_a_pth,
                 adv_pd_path=adv_pd_path,
                 site_p_path=site_p_pth,
-                prov=prov)
+                ia_a_nme= indig_autoch_nme,
+                bld_p_nme=bld_p_nme,
+                sr=wkid)
