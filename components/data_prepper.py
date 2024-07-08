@@ -195,7 +195,7 @@ class PrepareData:
                                                   op=self.spatial_relationship)
         bld_p_sdf_joined.drop(columns=['index_right'], inplace=True)
 
-        bld_p_sdf_joined.spatial.to_featureclass(os.path.join(scratch_gdb, self.out_fc_nme), overwrite=True)
+        bld_p_sdf_joined.spatial.to_featureclass(os.path.join(self.default_gdb, self.out_fc_nme), overwrite=True)
 
     def __init__(self, default_gdb: str, scratch_gdb: str, site_a_path: str, adv_pd_path: str, site_p_path: str,
                  ia_a_nme="INDIG_AUTOCH_A", bld_p_nme="BUILDING_P", out_fc_nme="bld_p_processed", sr=4326) -> None:
