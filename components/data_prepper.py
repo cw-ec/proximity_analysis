@@ -1,5 +1,6 @@
-import os, sys
+import os, sys, logging
 import pandas as pd
+from datetime import datetime
 from arcgis import GeoAccessor, GeoSeriesAccessor
 from arcpy import env, Geometry, ListFields, ListFeatureClasses, ListDatasets, Exists
 from arcpy.da import UpdateCursor
@@ -12,6 +13,27 @@ env.overwriteOutput = True  # Need this to overwrite outputs without failing
 
 
 class PrepareData:
+    @staticmethod
+    def logging_setup(log_dir=".\\logs") -> logging.getLogger():
+        """Sets up logging takes one parameter to set a directory for the output log file"""
+
+        def create_dir(path: str) -> None:
+            """Check if directory exists and if it doesn't create it."""
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+        create_dir(log_dir)
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            filemode='a',
+            handlers=[
+                logging.FileHandler(os.path.join(log_dir, f"{datetime.today().strftime('%Y-%m-%d')}.log")),
+                logging.StreamHandler(sys.stdout)
+            ],
+            datefmt="[%Y-%m-%d %H:%M:%S]"  # Tidy's up datetime format
+        )
+        return logging.getLogger()
 
     @staticmethod
     def is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr) -> None:
@@ -59,7 +81,7 @@ class PrepareData:
         if Exists(scratch_fc_path):
             for fld in [fld_nme, out_fld_nme]:
                 if fld in [f.name for f in ListFields(scratch_fc_path)]:
-                    print(f"{fld} already in target layer. Deleting existing field")
+                    self.logger.info(f"{fld} already in target layer. Deleting existing field")
                     DeleteField(scratch_fc_path, fld_nme)
 
         Identity(target_lyr, site_lyr, scratch_fc_path)  # Adds the fields site id field from site_a to the target layer
@@ -77,14 +99,14 @@ class PrepareData:
         sdf = sdf.sort_values(by='Join_Count', ascending=False).drop_duplicates(subset=temp_id, keep='first')
 
         if fld_nme not in sdf.columns.tolist():
-            print(fld_nme + " not in the output dataframe error")
-            print(sdf.columns)
+            self.logger.info(fld_nme + " not in the output dataframe error")
+            self.logger.info(sdf.columns)
             sys.exit()
 
         sdf.rename(columns={fld_nme: out_fld_nme}, inplace=True)
 
         if out_fld_nme not in sdf.columns.tolist():
-            print(out_fld_nme + " not in the output dataframe error")
+            self.logger.info(out_fld_nme + " not in the output dataframe error")
             sys.exit()
 
         # Merge the linked site_id field to the original data
@@ -110,7 +132,7 @@ class PrepareData:
 
         no_points_cnt = int(GetCount(self.ia_flyr)[0])  # Count of all polygons that have no points in them
 
-        print(f"Number of indigneous polygons with no BLDING_P points = {no_points_cnt}")
+        self.logger.info(f"Number of indigneous polygons with no BLDING_P points = {no_points_cnt}")
 
         if no_points_cnt > 0:  # If the no points count is greater than 0 add the centroid of those polygons to the blding p layer
 
@@ -158,11 +180,11 @@ class PrepareData:
         pd_missing = self.check_site_id_exists(pd_site_id, site_p_sdf)
         adv_missing = self.check_site_id_exists(adv_site_id, site_p_sdf)
 
-        print(f"Site_P points missing from matched site_ids (count): PDs: {len(pd_missing)}, ADVs:{len(adv_missing)}")
+        self.logger.info(f"Site_P points missing from matched site_ids (count): PDs: {len(pd_missing)}, ADVs:{len(adv_missing)}")
         if len(pd_missing) > 0:
-            print(f"Missing PD site_ids: {pd_missing}")
+            self.logger.info(f"Missing PD site_ids: {pd_missing}")
         if len(adv_missing) > 0:
-            print(f"Missing ADV site_ids: {adv_missing}")
+            self.logger.info(f"Missing ADV site_ids: {adv_missing}")
 
     def step_4(self):
         """Join the site_id's from the indigenous layers to the building_p layer"""
@@ -178,10 +200,13 @@ class PrepareData:
     def __init__(self, default_gdb: str, scratch_gdb: str, site_a_path: str, adv_pd_path: str, site_p_path: str,
                  ia_a_nme="INDIG_AUTOCH_A", bld_p_nme="BUILDING_P", out_fc_nme="bld_p_processed", sr=4326) -> None:
 
+        self.logger = self.logging_setup()
+        self.logger.info("Starting Data Prep")
+        self.logger.info('Validating Inputs')
         self.is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr)
 
         if not Exists(scratch_gdb):
-            print("Creating scratch gdb")
+            self.logger.info("Creating scratch gdb")
             path_elements = os.path.split(scratch_gdb)
             CreateFileGDB(path_elements[0], path_elements[1])
 
@@ -218,23 +243,23 @@ class PrepareData:
         self.bld_p_flyr = MakeFeatureLayer(self.bld_p_pth, 'bld_p')
 
         # run the process
-        print(
+        self.logger.info(
             "Running step 1: Identify indigenous communities without points in bld_p and add one (centroid) to the layer for the purpose of this analysis")
         self.step_1()
 
-        print("Running step 2: Associate the pd and adv site data with the point in each polygon")
+        self.logger.info("Running step 2: Associate the pd and adv site data with the point in each polygon")
         self.step_2()
 
-        print(
+        self.logger.info(
             "Running step 3: Test to see if the matched id fields are in the pd layer and note any that are not present")
         self.step_3()
 
-        print("Running step 4: Join the site_id's from the indigenous layers to the building_p layer")
+        self.logger.info("Running step 4: Join the site_id's from the indigenous layers to the building_p layer")
         self.step_4()
 
-        print("Processing Complete!")
+        self.logger.info("Data Prep Complete!")
 
-
+# Here for testing purposes only
 if __name__ == "__main__":
     default_gdb = r"C:\proximity_analysis\data\Proximity_ON\Default.gdb"
     scratch_gdb = r"C:\proximity_analysis\data\Proximity_ON\scratch.gdb"
