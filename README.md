@@ -1,6 +1,6 @@
 # Proximity Analysis
 
-This repository contains tool designed to automate Proximity Analysis tasks. Currently there is 1 tool available for use.
+This repository contains tools designed to automate Proximity Analysis tasks. Currently, there is 1 tool available for use.
 
 ## Environment Setup
 

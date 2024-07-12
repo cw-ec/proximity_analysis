@@ -13,6 +13,8 @@ Parameters:
     - ia_a_nme: Name for the indig_autoch feature classs in the default gdb. The default value of this parameter is "INDIG_AUTOCH_A".
     - bld_p_nme: Name for the bld_p feature class in the default gdb. The defult value of this parameter is "BUILDING_P".
     - sr: WKID for the projection of all layers. (Layers in a different projection will be reprojected to this WKID). The default value is 4326.
+    - pd_sid_fld_nme: The PD site id field name in the "AUTO_PD_SITE_ID" 
+    - adv_sid_fld_nme="AUTO_ADV_SITE_ID"
 
 More details on these inputs can be found in the docs
 

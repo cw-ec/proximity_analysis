@@ -36,7 +36,7 @@ class PrepareData:
         return logging.getLogger()
 
     @staticmethod
-    def is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr) -> None:
+    def is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr, pd_sid_fld_nme, adv_sid_fld_nme) -> None:
         """Validates input parameters and ensures that they are valid before processing the data"""
         if not Exists(default_gdb):
             raise Exception(f"Parameter default_gdb: Does not exist and should exist before processing begins")
@@ -59,6 +59,10 @@ class PrepareData:
         if not isinstance(sr, int):
             raise Exception(
                 f"Parameter sr: Must be an integer matching a projections WKID. Is currently type: {type(sr)}")
+        if not isinstance(pd_sid_fld_nme, str):
+            raise Exception(f"Parameter pd_sid_fld_nme must be of type string. Currently type {type(pd_sid_fld_nme)}")
+        if not isinstance(adv_sid_fld_nme, str):
+            raise Exception(f"Parameter adv_sid_fld_nme must be of type string. Currently type {type(adv_sid_fld_nme)}")
 
     def add_site_id(self, target_lyr, site_lyr, non_ess_fields: list[str], bldp_lyr, orig_sdf, fld_nme: str,
                     out_fld_nme: str, scratch_gdb_path: str, scratch_fc_nme='scratch',
@@ -198,12 +202,13 @@ class PrepareData:
         bld_p_sdf_joined.spatial.to_featureclass(os.path.join(self.default_gdb, self.out_fc_nme), overwrite=True)
 
     def __init__(self, default_gdb: str, scratch_gdb: str, site_a_path: str, adv_pd_path: str, site_p_path: str,
-                 ia_a_nme="INDIG_AUTOCH_A", bld_p_nme="BUILDING_P", out_fc_nme="bld_p_processed", sr=4326) -> None:
+                 ia_a_nme="INDIG_AUTOCH_A", bld_p_nme="BUILDING_P", out_fc_nme="bld_p_processed", sr=4326,
+                 pd_sid_fld_nme="AUTO_PD_SITE_ID", adv_sid_fld_nme="AUTO_ADV_SITE_ID") -> None:
 
         self.logger = self.logging_setup()
         self.logger.info("Starting Data Prep")
         self.logger.info('Validating Inputs')
-        self.is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr)
+        self.is_valid(default_gdb, scratch_gdb, site_a_path, site_p_path, adv_pd_path, ia_a_nme, out_fc_nme, sr, pd_sid_fld_nme, adv_sid_fld_nme)
 
         if not Exists(scratch_gdb):
             self.logger.info("Creating scratch gdb")
@@ -215,8 +220,8 @@ class PrepareData:
         self.bld_p_nme = bld_p_nme  # Name of the building p layer
         self.spatial_relationship = 'intersects'
 
-        self.pd_sid_fld_nme = "AUTO_PD_SITE_ID"
-        self.adv_sid_fld_nme = "AUTO_ADV_SITE_ID"
+        self.pd_sid_fld_nme = pd_sid_fld_nme
+        self.adv_sid_fld_nme = adv_sid_fld_nme
         self.out_fc_nme = out_fc_nme
 
         # Set the data parameters
